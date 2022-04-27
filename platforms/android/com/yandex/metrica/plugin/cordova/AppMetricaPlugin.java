@@ -9,12 +9,14 @@
 package com.yandex.metrica.plugin.cordova;
 
 import android.app.Activity;
+
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -22,10 +24,20 @@ import org.json.JSONObject;
 import com.yandex.metrica.PreloadInfo;
 import com.yandex.metrica.YandexMetrica;
 import com.yandex.metrica.YandexMetricaConfig;
+import com.yandex.metrica.ecommerce.ECommerceAmount;
+import com.yandex.metrica.ecommerce.ECommerceCartItem;
+import com.yandex.metrica.ecommerce.ECommerceEvent;
+import com.yandex.metrica.ecommerce.ECommerceOrder;
+import com.yandex.metrica.ecommerce.ECommercePrice;
+import com.yandex.metrica.ecommerce.ECommerceProduct;
+import com.yandex.metrica.ecommerce.ECommerceReferrer;
+import com.yandex.metrica.ecommerce.ECommerceScreen;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 
 public class AppMetricaPlugin extends CordovaPlugin {
 
@@ -51,6 +63,16 @@ public class AppMetricaPlugin extends CordovaPlugin {
                         setLocation(args, callbackContext);
                     } else if ("setLocationTracking".equals(action)) {
                         setLocationTracking(args, callbackContext);
+                    } else if ("showScreen".equals(action)) {
+                        showScreen(args, callbackContext);
+                    } else if ("showProductCard".equals(action)) {
+                        showProductCard(args, callbackContext);
+                    } else if ("addToCart".equals(action)) {
+                        addToCart(args, callbackContext);
+                    } else if ("removeFromCart".equals(action)) {
+                        removeFromCart(args, callbackContext);
+                    } else if ("finishCheckout".equals(action)) {
+                        finishCheckout(args, callbackContext);
                     } else {
                         callbackContext.error("Unknown action: " + action);
                     }
@@ -61,6 +83,7 @@ public class AppMetricaPlugin extends CordovaPlugin {
         });
         return true;
     }
+
 
     @Override
     public void onPause(final boolean multitasking) {
@@ -82,6 +105,91 @@ public class AppMetricaPlugin extends CordovaPlugin {
                 }
             }
         });
+    }
+
+    public ECommerceScreen createScreen(final JSONArray args) throws JSONException {
+        final JSONObject object = args.getJSONObject(0);
+        ECommerceScreen screen = new ECommerceScreen().setName(object.getString("screenName")).setSearchQuery(object.getString("searchQuery"));
+        return screen;
+    }
+
+    public ECommerceProduct createProduct(final JSONArray params) throws JSONException {
+        final JSONObject object = params.getJSONObject(0);
+        ECommercePrice actualPrice = new ECommercePrice(new ECommerceAmount(Integer.parseInt(object.getString("price")), object.getString("currency")));
+        ECommerceProduct product = new ECommerceProduct(object.getString("sku")).setActualPrice(actualPrice).setName(object.getString("name"));
+        return product;
+    }
+
+    public ECommerceCartItem createCartItem(final JSONArray args) throws JSONException {
+        final JSONObject object = args.getJSONObject(0);
+        ECommerceScreen screen = this.createScreen(args);
+        ECommerceProduct product = this.createProduct(args);
+        ECommercePrice actualPrice = new ECommercePrice(new ECommerceAmount(Integer.parseInt(object.getString("price")), object.getString("currency")));
+        ECommerceReferrer referrer = new ECommerceReferrer().setScreen(screen);
+        ECommerceCartItem cartItem = new ECommerceCartItem(product, actualPrice, Integer.parseInt(object.getString("quantity"))).setReferrer(referrer);
+        return cartItem;
+    }
+
+    public void showScreen(final JSONArray params, final CallbackContext callbackContext) throws JSONException {
+        ECommerceScreen screen = this.createScreen(params);
+        ECommerceEvent showScreenEvent = ECommerceEvent.showScreenEvent(screen);
+        YandexMetrica.reportECommerce(showScreenEvent);
+    }
+
+    public void showProductCard(final JSONArray params, final CallbackContext callbackContext) throws JSONException {
+        ECommerceScreen screen = this.createScreen(params);
+        ECommerceProduct product = this.createProduct(params);
+        ECommerceEvent showProductCardEvent = ECommerceEvent.showProductCardEvent(product, screen);
+        YandexMetrica.reportECommerce(showProductCardEvent);
+    }
+
+    public void addToCart(final JSONArray params, final CallbackContext callbackContext) throws JSONException {
+        ECommerceCartItem cartItem = this.createCartItem(params);
+        ECommerceEvent addCartItemEvent = ECommerceEvent.addCartItemEvent(cartItem);
+        YandexMetrica.reportECommerce(addCartItemEvent);
+    }
+
+    public void removeFromCart(final JSONArray params, final CallbackContext callbackContext) throws JSONException {
+        ECommerceCartItem cartItem = this.createCartItem(params);
+        ECommerceEvent removeCartItemEvent = ECommerceEvent.removeCartItemEvent(cartItem);
+        YandexMetrica.reportECommerce(removeCartItemEvent);
+    }
+
+    public void beginCheckout(final JSONArray products, final CallbackContext callbackContext) throws JSONException {
+        String identifier = products.getJSONObject(0).getString("identifier");
+        JSONArray jsonArray = products.getJSONObject(0).getJSONArray("products");
+        ArrayList<ECommerceCartItem> cartItems = new ArrayList<>();
+        try {
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONArray jsonArr = new JSONArray();
+                cartItems.add(this.createCartItem(jsonArr.put(jsonArray.getJSONObject(i))));
+            }
+            ECommerceOrder order = new ECommerceOrder(identifier, cartItems);
+            ECommerceEvent beginCheckoutEvent = ECommerceEvent.beginCheckoutEvent(order);
+            YandexMetrica.reportECommerce(beginCheckoutEvent);
+            callbackContext.success("add products beginCheckout");
+        } catch (JSONException ex) {
+            callbackContext.error(ex.getMessage());
+        }
+    }
+
+    public void finishCheckout(final JSONArray products, final CallbackContext callbackContext) throws JSONException {
+        String identifier = products.getJSONObject(0).getString("identifier");
+        JSONArray jsonArray = products.getJSONObject(0).getJSONArray("products");
+        ArrayList<ECommerceCartItem> cartItems = new ArrayList<>();
+        try {
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONArray jsonArr = new JSONArray();
+                cartItems.add(this.createCartItem(jsonArr.put(jsonArray.getJSONObject(i))));
+            }
+            ECommerceOrder order = new ECommerceOrder(identifier, cartItems);
+            ECommerceEvent purchaseEvent = ECommerceEvent.purchaseEvent(order);
+            YandexMetrica.reportECommerce(purchaseEvent);
+            callbackContext.success("add products finishCheckout");
+        } catch (JSONException ex) {
+            callbackContext.error(ex.getMessage());
+        }
+
     }
 
     private Activity getActivity() {
@@ -207,7 +315,8 @@ public class AppMetricaPlugin extends CordovaPlugin {
         try {
             final JSONObject eventParametersObj = args.getJSONObject(1);
             eventParametersJSONString = eventParametersObj.toString();
-        } catch (JSONException ignored) {}
+        } catch (JSONException ignored) {
+        }
 
         if (eventParametersJSONString != null) {
             YandexMetrica.reportEvent(eventName, eventParametersJSONString);
@@ -223,13 +332,14 @@ public class AppMetricaPlugin extends CordovaPlugin {
         try {
             final String errorReason = args.getString(1);
             errorThrowable = new Throwable(errorReason);
-        } catch (JSONException ignored) {}
+        } catch (JSONException ignored) {
+        }
 
         YandexMetrica.reportError(errorName, errorThrowable);
     }
 
-    private void setLocation(final JSONArray args,
-                             final CallbackContext callbackContext) throws JSONException {
+
+    private void setLocation(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
         final JSONObject locationObj = args.getJSONObject(0);
 
         final Location location = toLocation(locationObj);

@@ -7,10 +7,9 @@
  */
 
 repositories{
-  jcenter()
   mavenCentral()
 }
 
 dependencies {
-	compile 'com.yandex.android:mobmetricalib:3.6.4'
+    implementation 'com.yandex.android:mobmetricalib:4.2.0'
 }
