@@ -15,7 +15,7 @@
     <description>Cordova/PhoneGap plugin for AppMetrica analytics tool</description>
     <author>Yandex, LLC</author>
     <license>https://yandex.com/legal/appmetrica_sdk_agreement/</license>
-    <keywords>yandex appmetrica metrica analytics tracking ios android</keywords>
+    <keywords>yandex appmetrica metrica analytics tracking ios android ecommerce</keywords>
 
     <engines>
         <engine name="cordova" version=">=3.3.0"/>

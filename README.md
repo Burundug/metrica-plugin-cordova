@@ -14,7 +14,7 @@ Sample project to use is available at [sample/][GitHubSAMPLE].
 
 
 ```bash
-cordova https://github.com/Burundug/metrica-plugin-cordova.git
+cordova plugin add https://github.com/Burundug/metrica-plugin-cordova.git
 ```
 
 ## Ecommerce usage
