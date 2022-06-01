@@ -109,25 +109,22 @@ public class AppMetricaPlugin extends CordovaPlugin {
 
     public ECommerceScreen createScreen(final JSONArray args) throws JSONException {
         final JSONObject object = args.getJSONObject(0);
-        ECommerceScreen screen = new ECommerceScreen().setName(object.getString("screenName")).setSearchQuery(object.getString("searchQuery"));
-        return screen;
+        return new ECommerceScreen().setName(object.getString("screenName")).setSearchQuery(object.getString("searchQuery"));
     }
 
     public ECommerceProduct createProduct(final JSONArray params) throws JSONException {
         final JSONObject object = params.getJSONObject(0);
-        ECommercePrice actualPrice = new ECommercePrice(new ECommerceAmount(Integer.parseInt(object.getString("price")), object.getString("currency")));
-        ECommerceProduct product = new ECommerceProduct(object.getString("sku")).setActualPrice(actualPrice).setName(object.getString("name"));
-        return product;
+        ECommercePrice actualPrice = new ECommercePrice(new ECommerceAmount(Double.parseDouble(object.getString("price")), object.getString("currency")));
+        return new ECommerceProduct(object.getString("sku")).setActualPrice(actualPrice).setName(object.getString("name"));
     }
 
     public ECommerceCartItem createCartItem(final JSONArray args) throws JSONException {
         final JSONObject object = args.getJSONObject(0);
         ECommerceScreen screen = this.createScreen(args);
         ECommerceProduct product = this.createProduct(args);
-        ECommercePrice actualPrice = new ECommercePrice(new ECommerceAmount(Integer.parseInt(object.getString("price")), object.getString("currency")));
+        ECommercePrice actualPrice = new ECommercePrice(new ECommerceAmount(Double.parseDouble(object.getString("price")), object.getString("currency")));
         ECommerceReferrer referrer = new ECommerceReferrer().setScreen(screen);
-        ECommerceCartItem cartItem = new ECommerceCartItem(product, actualPrice, Integer.parseInt(object.getString("quantity"))).setReferrer(referrer);
-        return cartItem;
+        return new ECommerceCartItem(product, actualPrice, Double.parseDouble(object.getString("quantity"))).setReferrer(referrer);
     }
 
     public void showScreen(final JSONArray params, final CallbackContext callbackContext) throws JSONException {
