@@ -84,6 +84,121 @@ static bool gYMMIsAppMetricaActivated = false;
     }
 }
 
+- (YMMECommerceScreen *)createScreen:(NSDictionary *)screen {
+    YMMECommerceScreen *screenObj = [[YMMECommerceScreen alloc] initWithName:screen[@"screenName"] categoryComponents:@[] searchQuery:screen[@"searchQuery"] payload:@{}];
+    return screenObj;
+}
+
+- (YMMECommerceProduct *)createProduct:(NSDictionary *)product {
+    YMMECommerceAmount *actualFiat = [[YMMECommerceAmount alloc] initWithUnit:product[@"currency"] value:[NSDecimalNumber decimalNumberWithString:product[@"price"]]];
+   YMMECommercePrice *actualPrice = [[YMMECommercePrice alloc] initWithFiat:actualFiat internalComponents:@[]];
+    YMMECommerceProduct *productObj = [[YMMECommerceProduct alloc] initWithSKU:product[@"sku"] name:product[@"name"] categoryComponents:@[] payload:@{} actualPrice:actualPrice originalPrice:actualPrice promoCodes:@[]];
+    return productObj;
+}
+
+- (YMMECommercePrice *)createPrice:(NSDictionary *)product {
+    YMMECommerceAmount *priceObj = [[YMMECommerceAmount alloc] initWithUnit:product[@"currency"] value:[NSDecimalNumber decimalNumberWithString:product[@"price"]]];
+    YMMECommercePrice *actualPrice = [[YMMECommercePrice alloc] initWithFiat:priceObj internalComponents:@[]];
+
+    return actualPrice;
+}
+
+- (YMMECommerceCartItem *)createCartItem:(NSDictionary *)product {
+    YMMECommerceScreen *screen = [self createScreen:@{}];
+
+    YMMECommerceProduct *productObj = [self createProduct:product];
+
+     YMMECommerceReferrer *referrer = [[YMMECommerceReferrer alloc] initWithType:@"" identifier:@"" screen:screen];
+
+    NSDecimalNumber *quantity = [NSDecimalNumber decimalNumberWithString:product[@"quantity"]];
+
+    YMMECommercePrice *actualPrice = [self createPrice:product];
+
+    YMMECommerceCartItem *cartItem = [[YMMECommerceCartItem alloc]  initWithProduct:productObj quantity:quantity revenue:actualPrice referrer:referrer];
+
+    return cartItem;
+}
+
+// Используйте его, чтобы сообщить об открытии какой-либо страницы, например: списка товаров, поиска, главной страницы.
+
+- (void)showScreen:(CDVInvokedUrlCommand *)command {
+    NSDictionary* args = [command.arguments objectAtIndex:0];
+    YMMECommerceScreen *screenObj = [self createScreen:args];
+    [YMMYandexMetrica reportECommerce:[YMMECommerce showScreenEventWithScreen:screenObj] onFailure:nil];
+    CDVPluginResult* pluginResult = nil;
+    if (args != nil) {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Ecommerce sending"];
+    } else {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was null"];
+    }
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+
+- (void)showProductCard:(CDVInvokedUrlCommand *)command {
+    NSDictionary* args = [command.arguments objectAtIndex:0];
+    YMMECommerceScreen *screen = [self createScreen:@{}];
+    YMMECommerceProduct *productObj = [self createProduct:args];
+    [YMMYandexMetrica reportECommerce:[YMMECommerce showProductCardEventWithProduct:productObj screen:screen] onFailure:nil];
+    CDVPluginResult* pluginResult = nil;
+    if (args != nil) {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Ecommerce sending"];
+    } else {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was null"];
+    }
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)addToCart:(CDVInvokedUrlCommand *)command {
+    NSDictionary* args = [command.arguments objectAtIndex:0];
+    YMMECommerceCartItem *cartItem = [self createCartItem:args];
+    [YMMYandexMetrica reportECommerce:[YMMECommerce addCartItemEventWithItem:cartItem] onFailure:nil];
+    CDVPluginResult* pluginResult = nil;
+    if (args != nil) {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Ecommerce sending"];
+    } else {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was null"];
+    }
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)removeFromCart:(CDVInvokedUrlCommand *)command {
+    NSDictionary* args = [command.arguments objectAtIndex:0];
+    YMMECommerceCartItem *cartItem = [self createCartItem:args];
+    [YMMYandexMetrica reportECommerce:[YMMECommerce removeCartItemEventWithItem:cartItem] onFailure:nil];
+    CDVPluginResult* pluginResult = nil;
+    if (args != nil) {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Ecommerce sending"];
+    } else {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was null"];
+    }
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)finishCheckout:(CDVInvokedUrlCommand *)command {
+    NSDictionary* args = [command.arguments objectAtIndex:0];
+    NSString* identifier = [args objectForKey:@"identifier"];
+    NSArray<NSDictionary *> * products = [args objectForKey:@"products"];
+    NSMutableArray *cartItems = [[NSMutableArray alloc] init];
+        for(int i=0; i< products.count; i++){
+           [cartItems addObject:[self createCartItem:products[i]]];
+        }
+        YMMECommerceOrder *order = [[YMMECommerceOrder alloc] initWithIdentifier:identifier
+                                                                       cartItems:cartItems
+                                                                         payload:@{}];
+
+        [YMMYandexMetrica reportECommerce:[YMMECommerce purchaseEventWithOrder:order] onFailure:nil];
+    CDVPluginResult* pluginResult = nil;
+    if (args != nil) {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Ecommerce sending"];
+    } else {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was null"];
+    }
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+
+
 #pragma mark - Utils
 
 - (void (^)(NSError *error))failureCallbackForCommand:(CDVInvokedUrlCommand *)command

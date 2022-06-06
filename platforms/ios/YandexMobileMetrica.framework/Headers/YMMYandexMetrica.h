@@ -7,14 +7,26 @@
  */
 
 #import <Foundation/Foundation.h>
-#import "YMMCompletionBlocks.h"
+
+#if __has_include("YMMCompletionBlocks.h")
+    #import "YMMCompletionBlocks.h"
+    #import "YMMErrorRepresentable.h"
+#else
+    #import <YandexMobileMetrica/YMMCompletionBlocks.h>
+    #import <YandexMobileMetrica/YMMErrorRepresentable.h>
+#endif
 
 @class CLLocation;
 @class YMMYandexMetricaConfiguration;
 @class YMMReporterConfiguration;
 @class YMMUserProfile;
 @class YMMRevenueInfo;
+@class YMMECommerce;
 @protocol YMMYandexMetricaReporting;
+@protocol YMMYandexMetricaPlugins;
+#if !TARGET_OS_TV
+@class WKUserContentController;
+#endif
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -27,11 +39,13 @@ typedef NS_ENUM(NSInteger, YMMYandexMetricaEventErrorCode) {
     YMMYandexMetricaEventErrorCodeInvalidRevenueInfo = 1003,
     YMMYandexMetricaEventErrorCodeEmptyUserProfile = 1004,
     YMMYandexMetricaEventErrorCodeNoCrashLibrary = 1005,
+    YMMYandexMetricaEventErrorCodeInternalInconsistency = 1006,
+    YMMYandexMetricaEventErrorCodeInvalidBacktrace = 1007,
 };
 
 @interface YMMYandexMetrica : NSObject
 
-/** Starting the statistics collection process.
+/** Starts the statistics collection process.
 
  @param configuration Configuration combines all AppMetrica settings in one place.
  Configuration initialized with unique application key that is issued during application registration in AppMetrica.
@@ -40,7 +54,7 @@ typedef NS_ENUM(NSInteger, YMMYandexMetricaEventErrorCode) {
  */
 + (void)activateWithConfiguration:(YMMYandexMetricaConfiguration *)configuration;
 
-/** Reporting custom event.
+/** Reports a custom event.
 
  @param message Short name or description of the event.
  @param onFailure Block to be executed if an error occurs while reporting, the error is passed as block argument.
@@ -48,7 +62,7 @@ typedef NS_ENUM(NSInteger, YMMYandexMetricaEventErrorCode) {
 + (void)reportEvent:(NSString *)message
           onFailure:(nullable void (^)(NSError *error))onFailure;
 
-/** Reporting custom event with additional parameters.
+/** Reports a custom event with additional parameters.
 
  @param message Short name or description of the event.
  @param params Dictionary of name/value pairs that should be sent to the server.
@@ -58,7 +72,7 @@ typedef NS_ENUM(NSInteger, YMMYandexMetricaEventErrorCode) {
          parameters:(nullable NSDictionary *)params
           onFailure:(nullable void (^)(NSError *error))onFailure;
 
-/** Reporting custom error messages.
+/** Reports custom error messages.
 
  @param message Short name or description of the error
  @param exception Exception contains an NSException object that must be passed to the server. It can take the nil value.
@@ -66,7 +80,68 @@ typedef NS_ENUM(NSInteger, YMMYandexMetricaEventErrorCode) {
  */
 + (void)reportError:(NSString *)message
           exception:(nullable NSException *)exception
-          onFailure:(nullable void (^)(NSError *error))onFailure;
+          onFailure:(nullable void (^)(NSError *error))onFailure
+DEPRECATED_MSG_ATTRIBUTE("Use reportError:options:onFailure: or reportNSError:options:onFailure:");
+
+/** Reports an error of the `NSError` type.
+ AppMetrica uses domain and code for grouping errors.
+ 
+ Limits for `NSError`:
+ - 200 characters for `domain`;
+ - 50 key-value pairs for `userInfo`. 100 characters for a key length, 2000 for a value length;
+ - 10 underlying errors using `NSUnderlyingErrorKey` as a key in `userInfo`;
+ - 200 stack frames in a backtrace using `YMMBacktraceErrorKey` as a key in `userInfo`.
+ If the value exceeds the limit, AppMetrica truncates it.
+ 
+ @note You can also report custom backtrace in `NSError`, see the `YMMBacktraceErrorKey` constant.
+
+ @param error The error to report.
+ @param onFailure Block to be executed if an error occurres while reporting, the error is passed as block argument.
+ */
++ (void)reportNSError:(NSError *)error
+            onFailure:(nullable void (^)(NSError *error))onFailure NS_SWIFT_NAME(report(nserror:onFailure:));
+
+/** Reports an error of the `NSError` type.
+ AppMetrica uses domain and code for grouping errors.
+ Use this method to set the reporting options.
+ 
+ Limits for `NSError`:
+ - 200 characters for `domain`;
+ - 50 key-value pairs for `userInfo`. 100 characters for a key length, 2000 for a value length;
+ - 10 underlying errors using `NSUnderlyingErrorKey` as a key in `userInfo`;
+ - 200 stack frames in a backtrace using `YMMBacktraceErrorKey` as a key in `userInfo`.
+ If the value exceeds the limit, AppMetrica truncates it.
+ 
+ @note You can also report custom backtrace in `NSError`, see the `YMMBacktraceErrorKey` constant.
+ 
+ @param error The error to report.
+ @param options The options of error reporting.
+ @param onFailure Block to be executed if an error occurres while reporting, the error is passed as block argument.
+ */
++ (void)reportNSError:(NSError *)error
+              options:(YMMErrorReportingOptions)options
+            onFailure:(nullable void (^)(NSError *error))onFailure NS_SWIFT_NAME(report(nserror:options:onFailure:));
+
+/** Reports a custom error.
+ @note See `YMMErrorRepresentable` for more information.
+
+ @param error The error to report.
+ @param onFailure Block to be executed if an error occurres while reporting, the error is passed as block argument.
+ */
++ (void)reportError:(id<YMMErrorRepresentable>)error
+          onFailure:(nullable void (^)(NSError *error))onFailure NS_SWIFT_NAME(report(error:onFailure:));
+
+/** Reports a custom error.
+ Use this method to set the reporting options.
+ @note See `YMMErrorRepresentable` for more information.
+
+ @param error The error to report.
+ @param options The options of error reporting.
+ @param onFailure Block to be executed if an error occurres while reporting, the error is passed as block argument.
+ */
++ (void)reportError:(id<YMMErrorRepresentable>)error
+            options:(YMMErrorReportingOptions)options
+          onFailure:(nullable void (^)(NSError *error))onFailure NS_SWIFT_NAME(report(error:options:onFailure:));
 
 /** Sends information about the user profile.
  
@@ -132,7 +207,6 @@ typedef NS_ENUM(NSInteger, YMMYandexMetricaEventErrorCode) {
 
 /** Handles the URL that has opened the application.
  Reports the URL for deep links tracking.
- URL scheme should be registered beforehand via `enableTrackingWithUrlScheme:` method for tracking to work correctly.
 
  @param url URL that has opened the application.
  */
@@ -159,9 +233,8 @@ typedef NS_ENUM(NSInteger, YMMYandexMetricaEventErrorCode) {
 /**
  * Sets referral URL for this installation. This might be required to track some specific traffic sources like Facebook.
  * @param url referral URL value.
- * @warning Referral URL reporting is no longer available.
  */
-+ (void)reportReferralUrl:(NSURL *)url DEPRECATED_MSG_ATTRIBUTE("Referral URL reporting is no longer available");
++ (void)reportReferralUrl:(NSURL *)url;
 
 /** Sends all stored events from the buffer.
 
@@ -188,6 +261,68 @@ typedef NS_ENUM(NSInteger, YMMYandexMetricaEventErrorCode) {
  */
 + (void)pauseSession;
 
+/** Sets a key-value pair associated with errors and crashes.
+ @note
+ AppMetrica uses it as additional information for further unhandled exceptions.
+ If the value is nil, AppMetrica removes the previously set key-value pair.
+
+ @param value Error environment value.
+ @param key Error environment key.
+ */
++ (void)setErrorEnvironmentValue:(nullable NSString *)value forKey:(NSString *)key;
+
+/** Sends information about the E-commerce event.
+
+ @note See `YMMEcommerce` for all possible E-commerce events.
+
+ @param eCommerce The object of `YMMECommerce` class.
+ @param onFailure Block to be executed if an error occurs while reporting, the error is passed as block argument.
+ */
++ (void)reportECommerce:(YMMECommerce *)eCommerce
+              onFailure:(nullable void (^)(NSError *error))onFailure NS_SWIFT_NAME(report(eCommerce:onFailure:));
+
+#if !TARGET_OS_TV
+/**
+ * Adds interface named "AppMetrica" to WKWebView's JavaScript.
+ * It enabled you to report events to AppMetrica from JavaScript code.
+ * @note
+ * This method must be called before adding any WKUserScript that uses AppMetrica interface or creating WKWebView.
+ * Example:
+ * ````
+ * WKWebViewConfiguration *webConfiguration = [WKWebViewConfiguration new];
+ * WKUserContentController *userContentController = [WKUserContentController new];
+ * [YMMYandexMetrica initWebViewReporting:userContentController
+                                onFailure:nil];
+ * [userContentController addUserScript:self.scriptWithAppMetrica];
+ * webConfiguration.userContentController = userContentController;
+ * self.webView = [[WKWebView alloc] initWithFrame:CGRectZero configuration:webConfiguration];
+ * ````
+ * After web view reporting is initialized you can report event to AppMetrica from your JavaScript code the following way:
+ * ````
+ * function reportToAppMetrica(eventName, eventValue) {
+ *     AppMetrica.reportEvent(eventName, eventValue);
+ * }
+ * ````
+ * Here eventName is any non-empty String, eventValue is a JSON String, may be null or empty.
+ *
+ * @param userContentController UserContentController object used in WebView's configuration
+ * @param onFailure Block to be executed if an error occurs while initializing web view reporting,
+ *                  the error is passed as block argument.
+ */
++ (void)initWebViewReporting:(WKUserContentController *)userContentController
+                   onFailure:(nullable void (^)(NSError *error))onFailure;
+#endif
+
+/**
+ * Creates a `YMMYandexMetricaPlugins` that can send plugin events to main API key.
+ * Only one `YMMYandexMetricaPlugins` instance is created.
+ * You can either query it each time you need it, or save the reference by yourself.
+ * NOTE: to use this extension you must activate AppMetrica first
+ * via `[YMMYandexMetrica activateWithConfiguration:]`.
+ *
+ * @return plugin extension instance
+ */
++ (id<YMMYandexMetricaPlugins>)getPluginExtension;
 @end
 
 NS_ASSUME_NONNULL_END

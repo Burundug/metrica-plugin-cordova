@@ -29,9 +29,28 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (nonatomic, assign, readonly) NSUInteger sessionTimeout;
 
+/** Maximum number of reports stored in the database.
+
+ Acceptable values are in the range of [100; 10000]. If passed value is outside of the range, AppMetrica automatically
+ trims it to closest border value.
+
+ @note Different apiKeys use different databases and can have different limits of reports count.
+ The parameter only affects the configuration created for that apiKey.
+ To set the parameter for the main apiKey, see `YMMYandexMetricaConfiguration.maxReportsInDatabaseCount`.
+
+ By default, the parameter value is 1000.
+ */
+@property (nonatomic, assign, readonly) NSUInteger maxReportsInDatabaseCount;
+
 /** Logging activation status.
  */
 @property (nonatomic, assign, readonly) BOOL logs;
+
+/** Sets the ID of the user profile.
+
+ @warning The value can contain up to 200 characters.
+ */
+@property (nonatomic, copy, nullable, readonly) NSString *userProfileID;
 
 /** Initialize configuration with specified Application key.
 
@@ -60,11 +79,30 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (nonatomic, assign) NSUInteger sessionTimeout;
 
+/** Maximum number of reports stored in the database.
+
+ Acceptable values are in the range of [100; 10000]. If passed value is outside of the range, AppMetrica automatically
+ trims it to closest border value.
+
+ @note Different apiKeys use different databases and can have different limits of reports count.
+ The parameter only affects the configuration created for that apiKey.
+ To set the parameter for the main apiKey, see `YMMYandexMetricaConfiguration.maxReportsInDatabaseCount`.
+
+ By default, the parameter value is 1000.
+ */
+@property (nonatomic, assign) NSUInteger maxReportsInDatabaseCount;
+
 /** Enables/disables logging.
 
  By default logging is disabled.
  */
 @property (nonatomic, assign) BOOL logs;
+
+/** Sets the ID of the user profile.
+
+ @warning The value can contain up to 200 characters.
+ */
+@property (nonatomic, copy, nullable) NSString *userProfileID;
 
 - (instancetype)init NS_UNAVAILABLE;
 

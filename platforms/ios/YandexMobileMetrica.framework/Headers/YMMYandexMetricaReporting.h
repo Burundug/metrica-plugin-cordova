@@ -8,8 +8,16 @@
 
 #import <Foundation/Foundation.h>
 
+#if __has_include("YMMErrorRepresentable.h")
+    #import "YMMErrorRepresentable.h"
+#else
+    #import <YandexMobileMetrica/YMMErrorRepresentable.h>
+#endif
+
 @class YMMUserProfile;
 @class YMMRevenueInfo;
+@class YMMECommerce;
+@protocol YMMYandexMetricaPluginReporting;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -17,7 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @protocol YMMYandexMetricaReporting <NSObject>
 
-/** Reporting custom event.
+/** Reports a custom event.
 
  @param name Short name or description of the event.
  @param onFailure Block to be executed if an error occurs while reporting, the error is passed as block argument.
@@ -25,7 +33,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)reportEvent:(NSString *)name
           onFailure:(nullable void (^)(NSError *error))onFailure;
 
-/** Reporting custom event with additional parameters.
+/** Reports a custom event with additional parameters.
 
  @param name Short name or description of the event.
  @param params Dictionary of name/value pairs that must be sent to the server.
@@ -35,7 +43,7 @@ NS_ASSUME_NONNULL_BEGIN
          parameters:(nullable NSDictionary *)params
           onFailure:(nullable void (^)(NSError *error))onFailure;
 
-/** Reporting custom error messages.
+/** Reports custom error messages.
 
  @param name Short name or description of the error.
  @param exception NSException object that must be sent to the server.
@@ -43,7 +51,68 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)reportError:(NSString *)name
           exception:(nullable NSException *)exception
-          onFailure:(nullable void (^)(NSError *error))onFailure;
+          onFailure:(nullable void (^)(NSError *error))onFailure
+DEPRECATED_MSG_ATTRIBUTE("Use reportError:options:onFailure: or reportNSError:options:onFailure:");
+
+/** Reports an error of the `NSError` type.
+ AppMetrica uses domain and code for grouping errors.
+ 
+ Limits for `NSError`:
+ - 200 characters for `domain`;
+ - 50 key-value pairs for `userInfo`. 100 characters for a key length, 2000 for a value length;
+ - 10 underlying errors using `NSUnderlyingErrorKey` as a key in `userInfo`;
+ - 200 stack frames in a backtrace using `YMMBacktraceErrorKey` as a key in `userInfo`.
+ If the value exceeds the limit, AppMetrica truncates it.
+ 
+ @note You can also report custom backtrace in `NSError`, see the `YMMBacktraceErrorKey` constant.
+
+ @param error The error to report.
+ @param onFailure Block to be executed if an error occurres while reporting, the error is passed as block argument.
+ */
+- (void)reportNSError:(NSError *)error
+            onFailure:(nullable void (^)(NSError *error))onFailure NS_SWIFT_NAME(report(nserror:onFailure:));
+
+/** Reports an error of the `NSError` type.
+ AppMetrica uses domain and code for grouping errors.
+ Use this method to set the reporting options.
+ 
+ Limits for `NSError`:
+ - 200 characters for `domain`;
+ - 50 key-value pairs for `userInfo`. 100 characters for a key length, 2000 for a value length;
+ - 10 underlying errors using `NSUnderlyingErrorKey` as a key in `userInfo`;
+ - 200 stack frames in a backtrace using `YMMBacktraceErrorKey` as a key in `userInfo`.
+ If the value exceeds the limit, AppMetrica truncates it.
+ 
+ @note You can also report custom backtrace in `NSError`, see the `YMMBacktraceErrorKey` constant.
+
+ @param error The error to report.
+ @param options The options of error reporting.
+ @param onFailure Block to be executed if an error occurres while reporting, the error is passed as block argument.
+ */
+- (void)reportNSError:(NSError *)error
+              options:(YMMErrorReportingOptions)options
+            onFailure:(nullable void (^)(NSError *error))onFailure NS_SWIFT_NAME(report(nserror:options:onFailure:));
+
+/** Reports a custom error.
+ @note See `YMMErrorRepresentable` for more information.
+
+ @param error The error to report.
+ @param onFailure Block to be executed if an error occurres while reporting, the error is passed as block argument.
+ */
+- (void)reportError:(id<YMMErrorRepresentable>)error
+          onFailure:(nullable void (^)(NSError *error))onFailure NS_SWIFT_NAME(report(error:onFailure:));
+
+/** Reports a custom error.
+ Use this method to set the reporting options.
+ @note See `YMMErrorRepresentable` for more information.
+
+ @param error The error to report.
+ @param options The options of error reporting.
+ @param onFailure Block to be executed if an error occurres while reporting, the error is passed as block argument.
+ */
+- (void)reportError:(id<YMMErrorRepresentable>)error
+            options:(YMMErrorReportingOptions)options
+          onFailure:(nullable void (^)(NSError *error))onFailure NS_SWIFT_NAME(report(error:options:onFailure:));
 
 /** Sends information about the user profile.
 
@@ -73,7 +142,7 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)resumeSession;
 
-/** Pause current session.
+/** Pauses current session.
  All events reported after calling this method and till the session timeout will still join this session.
  Should be used when auto tracking of application state is unavailable or is different.
  */
@@ -96,6 +165,25 @@ NS_ASSUME_NONNULL_BEGIN
  @warning Frequent use of the method can lead to increasing outgoing internet traffic and energy consumption.
  */
 - (void)sendEventsBuffer;
+
+/** Sends information about the E-commerce event.
+
+ @note See `YMMEcommerce` for all possible E-commerce events.
+
+ @param eCommerce The object of `YMMECommerceEvent` protocol created with `YMMEcommerce` class.
+ @param onFailure Block to be executed if an error occurs while reporting, the error is passed as block argument.
+ */
+- (void)reportECommerce:(YMMECommerce *)eCommerce
+              onFailure:(nullable void (^)(NSError *error))onFailure NS_SWIFT_NAME(report(eCommerce:onFailure:));
+
+/**
+ * Creates a `YMMYandexMetricaPluginReporting` that can send plugin events to this reporter.
+ * For every reporter only one `YMMYandexMetricaPluginReporting` instance is created.
+ * You can either query it each time you need it, or save the reference by yourself.
+ *
+ * @return plugin extension instance for this reporter
+ */
+- (id<YMMYandexMetricaPluginReporting>)getPluginExtension;
 
 @end
 

@@ -41,7 +41,7 @@ NS_ASSUME_NONNULL_BEGIN
 /** Whether activation of AppMetrica should be considered as the start of a session.
  If this option is disabled session starts at UIApplicationDidBecomeActiveNotification.
 
- The option is disabled by default. Enable this property if you want events that are reported after activation to join
+ The option is disabled by default. Enable this property if you want events that are reported after activation to join
  the current session.
  */
 @property (nonatomic, assign) BOOL handleActivationAsSessionStart;
@@ -65,6 +65,19 @@ NS_ASSUME_NONNULL_BEGIN
  By default, the statistics sending is enabled.
  */
 @property (nonatomic, assign) BOOL statisticsSending;
+
+/** Maximum number of reports stored in the database.
+
+ Acceptable values are in the range of [100; 10000]. If passed value is outside of the range, AppMetrica automatically
+ trims it to closest border value.
+
+ @note Different apiKeys use different databases and can have different limits of reports count.
+ The parameter only affects the configuration created for that apiKey.
+ To set the parameter for a different apiKey, see `YMMReporterConfiguration.maxReportsInDatabaseCount`
+
+ By default, the parameter value is 1000.
+ */
+@property (nonatomic, assign) NSUInteger maxReportsInDatabaseCount;
 
 /** Enable/disable location reporting to AppMetrica.
  If enabled and location set via setLocation: method - that location would be used.
@@ -109,12 +122,44 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (nonatomic, assign) BOOL logs;
 
+/** Defines the app type as "For Kids" to comply with the
+ [App Store Review Guidelines for Kids' Category](https://developer.apple.com/app-store/review/guidelines/#kids).
+ If the option is enabled, AppMetrica SDK doesn't send advertising IDs and device location.
+
+@note Enable this option only if your app intended for the "For Kids" category.
+ */
+@property (nonatomic, assign) BOOL appForKids DEPRECATED_ATTRIBUTE;
+
 /** Set/get preload info, which is used for tracking preload installs.
  Additional info could be https://appmetrica.yandex.com
 
  By default is nil.
  */
 @property (nonatomic, copy, nullable) YMMYandexMetricaPreloadInfo *preloadInfo;
+
+/**
+ Enables/disables auto tracking of inapp purchases.
+
+ By default is enabled.
+ */
+@property (nonatomic, assign) BOOL revenueAutoTrackingEnabled;
+
+/**
+ Enables/disables app open auto tracking.
+ By default is enabled.
+
+ Set this flag to YES to track URLs that open the app.
+ @note Auto tracking will only capture links that open the app. Those that are clicked on while
+ the app is open will be ignored. If you need to track them as well use manual reporting as described
+ [here](https://appmetrica.yandex.ru/docs/mobile-sdk-dg/concepts/ios-operations.html#deeplink-tracking).
+ */
+@property (nonatomic, assign) BOOL appOpenTrackingEnabled;
+
+/** Sets the ID of the user profile.
+
+ @warning The value can contain up to 200 characters.
+ */
+@property (nonatomic, copy, nullable) NSString *userProfileID;
 
 @end
 
