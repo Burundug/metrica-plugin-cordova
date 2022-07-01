@@ -49,8 +49,14 @@
 
         <header-file src="platforms/ios/YMMAppMetricaPlugin.h" />
         <source-file src="platforms/ios/YMMAppMetricaPlugin.m" />
-        <framework src="platforms/ios/YandexMobileMetrica.framework" custom="true" />
-        <framework src="platforms/ios/YandexMobileMetricaCrashes.framework" custom="true" />
+        <podspec>
+            <config>
+                <source url="https://cdn.cocoapods.org/"/>
+            </config>
+            <pods use-frameworks="true">
+                <pod name="YandexMobileMetrica" spec="4.2.0"/>
+            </pods>
+        </podspec>
 
         <framework src="AdSupport.framework" />
         <framework src="CoreGraphics.framework" />

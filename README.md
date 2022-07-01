@@ -94,6 +94,10 @@ select **Attribute this app installation to a previously served advertisement**.
 
 ## Changelog
 
+### Version 1.2.0
+
+* Added ios ecommerce support.
+
 ### Version 1.1.0
 
 * Updated versions of the AppMetrica SDK (Android 4.2.0).
