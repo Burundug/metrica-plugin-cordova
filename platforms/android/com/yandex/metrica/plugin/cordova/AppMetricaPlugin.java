@@ -13,6 +13,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
+import android.util.Log;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -119,12 +120,17 @@ public class AppMetricaPlugin extends CordovaPlugin {
     }
 
     public ECommerceCartItem createCartItem(final JSONArray args) throws JSONException {
-        final JSONObject object = args.getJSONObject(0);
-        ECommerceScreen screen = this.createScreen(args);
-        ECommerceProduct product = this.createProduct(args);
-        ECommercePrice actualPrice = new ECommercePrice(new ECommerceAmount(Double.parseDouble(object.getString("price")), object.getString("currency")));
-        ECommerceReferrer referrer = new ECommerceReferrer().setScreen(screen);
-        return new ECommerceCartItem(product, actualPrice, Double.parseDouble(object.getString("quantity"))).setReferrer(referrer);
+        try {
+            final JSONObject object = args.getJSONObject(0);
+            ECommerceScreen screen = this.createScreen(args);
+            ECommerceProduct product = this.createProduct(args);
+            ECommercePrice actualPrice = new ECommercePrice(new ECommerceAmount(Double.parseDouble(object.getString("price")), object.getString("currency")));
+            ECommerceReferrer referrer = new ECommerceReferrer().setScreen(screen);
+            return new ECommerceCartItem(product, actualPrice, Double.parseDouble(object.getString("quantity"))).setReferrer(referrer);
+        } catch (Throwable t) {
+            Log.e("ERROR", t.toString());
+            return null;
+        }
     }
 
     public void showScreen(final JSONArray params, final CallbackContext callbackContext) throws JSONException {
