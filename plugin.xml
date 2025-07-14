@@ -54,7 +54,7 @@
                 <source url="https://cdn.cocoapods.org/"/>
             </config>
             <pods use-frameworks="true">
-                <pod name="YandexMobileMetrica" spec="4.2.0"/>
+                <pod name="YandexMobileMetrica" spec="7.9.0"/>
             </pods>
         </podspec>
 
