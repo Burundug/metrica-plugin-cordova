@@ -22,22 +22,23 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.yandex.metrica.PreloadInfo;
-import com.yandex.metrica.YandexMetrica;
-import com.yandex.metrica.YandexMetricaConfig;
-import com.yandex.metrica.ecommerce.ECommerceAmount;
-import com.yandex.metrica.ecommerce.ECommerceCartItem;
-import com.yandex.metrica.ecommerce.ECommerceEvent;
-import com.yandex.metrica.ecommerce.ECommerceOrder;
-import com.yandex.metrica.ecommerce.ECommercePrice;
-import com.yandex.metrica.ecommerce.ECommerceProduct;
-import com.yandex.metrica.ecommerce.ECommerceReferrer;
-import com.yandex.metrica.ecommerce.ECommerceScreen;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import io.appmetrica.analytics.AppMetrica;
+import io.appmetrica.analytics.AppMetricaConfig;
+import io.appmetrica.analytics.PreloadInfo;
+import io.appmetrica.analytics.ecommerce.ECommerceAmount;
+import io.appmetrica.analytics.ecommerce.ECommerceCartItem;
+import io.appmetrica.analytics.ecommerce.ECommerceEvent;
+import io.appmetrica.analytics.ecommerce.ECommerceOrder;
+import io.appmetrica.analytics.ecommerce.ECommercePrice;
+import io.appmetrica.analytics.ecommerce.ECommerceProduct;
+import io.appmetrica.analytics.ecommerce.ECommerceReferrer;
+import io.appmetrica.analytics.ecommerce.ECommerceScreen;
 
 
 public class AppMetricaPlugin extends CordovaPlugin {
@@ -102,7 +103,7 @@ public class AppMetricaPlugin extends CordovaPlugin {
             @Override
             public void run() {
                 if (mAppMetricaActivated) {
-                    YandexMetrica.reportAppOpen(getActivity());
+                    AppMetrica.reportAppOpen(getActivity());
                 }
             }
         });
@@ -136,26 +137,26 @@ public class AppMetricaPlugin extends CordovaPlugin {
     public void showScreen(final JSONArray params, final CallbackContext callbackContext) throws JSONException {
         ECommerceScreen screen = this.createScreen(params);
         ECommerceEvent showScreenEvent = ECommerceEvent.showScreenEvent(screen);
-        YandexMetrica.reportECommerce(showScreenEvent);
+        AppMetrica.reportECommerce(showScreenEvent);
     }
 
     public void showProductCard(final JSONArray params, final CallbackContext callbackContext) throws JSONException {
         ECommerceScreen screen = this.createScreen(params);
         ECommerceProduct product = this.createProduct(params);
         ECommerceEvent showProductCardEvent = ECommerceEvent.showProductCardEvent(product, screen);
-        YandexMetrica.reportECommerce(showProductCardEvent);
+        AppMetrica.reportECommerce(showProductCardEvent);
     }
 
     public void addToCart(final JSONArray params, final CallbackContext callbackContext) throws JSONException {
         ECommerceCartItem cartItem = this.createCartItem(params);
         ECommerceEvent addCartItemEvent = ECommerceEvent.addCartItemEvent(cartItem);
-        YandexMetrica.reportECommerce(addCartItemEvent);
+        AppMetrica.reportECommerce(addCartItemEvent);
     }
 
     public void removeFromCart(final JSONArray params, final CallbackContext callbackContext) throws JSONException {
         ECommerceCartItem cartItem = this.createCartItem(params);
         ECommerceEvent removeCartItemEvent = ECommerceEvent.removeCartItemEvent(cartItem);
-        YandexMetrica.reportECommerce(removeCartItemEvent);
+        AppMetrica.reportECommerce(removeCartItemEvent);
     }
 
     public void beginCheckout(final JSONArray products, final CallbackContext callbackContext) throws JSONException {
@@ -169,7 +170,7 @@ public class AppMetricaPlugin extends CordovaPlugin {
             }
             ECommerceOrder order = new ECommerceOrder(identifier, cartItems);
             ECommerceEvent beginCheckoutEvent = ECommerceEvent.beginCheckoutEvent(order);
-            YandexMetrica.reportECommerce(beginCheckoutEvent);
+            AppMetrica.reportECommerce(beginCheckoutEvent);
             callbackContext.success("add products beginCheckout");
         } catch (JSONException ex) {
             callbackContext.error(ex.getMessage());
@@ -187,7 +188,7 @@ public class AppMetricaPlugin extends CordovaPlugin {
             }
             ECommerceOrder order = new ECommerceOrder(identifier, cartItems);
             ECommerceEvent purchaseEvent = ECommerceEvent.purchaseEvent(order);
-            YandexMetrica.reportECommerce(purchaseEvent);
+            AppMetrica.reportECommerce(purchaseEvent);
             callbackContext.success("add products finishCheckout");
         } catch (JSONException ex) {
             callbackContext.error(ex.getMessage());
@@ -207,7 +208,7 @@ public class AppMetricaPlugin extends CordovaPlugin {
         synchronized (mLock) {
             mActivityPaused = true;
             if (mAppMetricaActivated) {
-                YandexMetrica.pauseSession(getActivity());
+                AppMetrica.pauseSession(getActivity());
             }
         }
     }
@@ -216,7 +217,7 @@ public class AppMetricaPlugin extends CordovaPlugin {
         synchronized (mLock) {
             mActivityPaused = false;
             if (mAppMetricaActivated) {
-                YandexMetrica.resumeSession(getActivity());
+                AppMetrica.resumeSession(getActivity());
             }
         }
     }
@@ -249,9 +250,9 @@ public class AppMetricaPlugin extends CordovaPlugin {
         return location;
     }
 
-    public static YandexMetricaConfig toConfig(final JSONObject configObj) throws JSONException {
+    public static AppMetricaConfig toConfig(final JSONObject configObj) throws JSONException {
         final String apiKey = configObj.getString("apiKey");
-        final YandexMetricaConfig.Builder builder = YandexMetricaConfig.newConfigBuilder(apiKey);
+        final AppMetricaConfig.Builder builder = AppMetricaConfig.newConfigBuilder(apiKey);
 
         if (configObj.has("handleFirstActivationAsUpdate")) {
             builder.handleFirstActivationAsUpdate(configObj.getBoolean("handleFirstActivationAsUpdate"));
@@ -295,16 +296,16 @@ public class AppMetricaPlugin extends CordovaPlugin {
     private void activate(final JSONArray args,
                           final CallbackContext callbackContext) throws JSONException {
         final JSONObject configObj = args.getJSONObject(0);
-        final YandexMetricaConfig config = toConfig(configObj);
+        final AppMetricaConfig config = toConfig(configObj);
 
         final Context context = getActivity().getApplicationContext();
-        YandexMetrica.activate(context, config);
+        AppMetrica.activate(context, config);
 
         synchronized (mLock) {
-            if (mAppMetricaActivated == false) {
-                YandexMetrica.reportAppOpen(getActivity());
-                if (mActivityPaused == false) {
-                    YandexMetrica.resumeSession(getActivity());
+            if (!mAppMetricaActivated) {
+                AppMetrica.reportAppOpen(getActivity());
+                if (!mActivityPaused) {
+                    AppMetrica.resumeSession(getActivity());
                 }
             }
             mAppMetricaActivated = true;
@@ -322,9 +323,9 @@ public class AppMetricaPlugin extends CordovaPlugin {
         }
 
         if (eventParametersJSONString != null) {
-            YandexMetrica.reportEvent(eventName, eventParametersJSONString);
+            AppMetrica.reportEvent(eventName, eventParametersJSONString);
         } else {
-            YandexMetrica.reportEvent(eventName);
+            AppMetrica.reportEvent(eventName);
         }
     }
 
@@ -338,7 +339,7 @@ public class AppMetricaPlugin extends CordovaPlugin {
         } catch (JSONException ignored) {
         }
 
-        YandexMetrica.reportError(errorName, errorThrowable);
+        AppMetrica.reportError(errorName, errorThrowable);
     }
 
 
@@ -346,13 +347,13 @@ public class AppMetricaPlugin extends CordovaPlugin {
         final JSONObject locationObj = args.getJSONObject(0);
 
         final Location location = toLocation(locationObj);
-        YandexMetrica.setLocation(location);
+        AppMetrica.setLocation(location);
     }
 
     private void setLocationTracking(final JSONArray args,
                                      final CallbackContext callbackContext) throws JSONException {
         final boolean enabled = args.getBoolean(0);
 
-        YandexMetrica.setLocationTracking(enabled);
+        AppMetrica.setLocationTracking(enabled);
     }
 }
