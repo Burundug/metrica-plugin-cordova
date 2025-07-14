@@ -11,5 +11,5 @@ repositories{
 }
 
 dependencies {
-    implementation 'com.yandex.android:mobmetricalib:7.9.0'
+    implementation 'io.appmetrica.analytics:analytics:6.0.0'
 }
